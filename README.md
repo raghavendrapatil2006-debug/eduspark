@@ -1,5 +1,6 @@
 # ⚡ EduSpark — Next-Gen AI Academic Ecosystem (KG to PhD)
 
+[![Vercel Deployment](https://img.shields.io/badge/Deployed%20on-Vercel-black.svg?logo=vercel)](https://eduspark-mocha.vercel.app)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-eduspark--8bf63.web.app-FFCA28.svg?logo=firebase)](https://eduspark-8bf63.web.app)
 [![Flutter Version](https://img.shields.io/badge/Flutter-3.x-blue.svg?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2.svg?logo=dart)](https://dart.dev)
@@ -7,7 +8,7 @@
 [![Tests](https://img.shields.io/badge/Tests-26%20Passing-success.svg)](#running-tests)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> 🚀 **Live Web App:** Try EduSpark right in your browser at **[https://eduspark-8bf63.web.app](https://eduspark-8bf63.web.app)**!
+> 🚀 **Live Production App:** Try EduSpark right now at **[https://eduspark-mocha.vercel.app](https://eduspark-mocha.vercel.app)** (or [Firebase Mirror](https://eduspark-8bf63.web.app))!
 
 **EduSpark** is an AI-native personalized learning and virtual teaching ecosystem crafted for learners and educators across every standard — from Kindergarten and Primary School to Secondary Board Prep, Undergraduate Degrees (B.Tech Engineering, MBBS), and Doctoral / PhD research.
 
