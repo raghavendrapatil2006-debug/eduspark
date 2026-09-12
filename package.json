@@ -1,1 +1,8 @@
-{"name": "eduspark", "version": "1.0.0", "scripts": {"build": "if [ ! -d \"$HOME/flutter\" ]; then git clone --depth 1 https://github.com/flutter/flutter.git -b stable $HOME/flutter; fi && export PATH=\"$PATH:$HOME/flutter/bin\" && flutter build web --release"}}
+{
+  "name": "eduspark",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "bash scripts/vercel-build.sh"
+  }
+}
+

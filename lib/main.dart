@@ -11,19 +11,23 @@ import 'core/services/auth_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // ignore: deprecated_member_use
-  await FirebaseAppCheck.instance.activate(
     // ignore: deprecated_member_use
-    webProvider: WebDebugProvider(
-      debugToken: '86bde81c-cbc7-479e-b913-2554beb1036f',
-    ),
-    // ignore: deprecated_member_use
-    androidProvider: AndroidProvider.debug,
-    // ignore: deprecated_member_use
-    appleProvider: AppleProvider.debug,
-  );
+    await FirebaseAppCheck.instance.activate(
+      // ignore: deprecated_member_use
+      webProvider: WebDebugProvider(
+        debugToken: '86bde81c-cbc7-479e-b913-2554beb1036f',
+      ),
+      // ignore: deprecated_member_use
+      androidProvider: AndroidProvider.debug,
+      // ignore: deprecated_member_use
+      appleProvider: AppleProvider.debug,
+    );
+  } catch (e) {
+    debugPrint('Firebase initialization note: $e');
+  }
 
   await UserProfileService.instance.init();
   await AuthService.instance.init();
