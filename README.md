@@ -1,10 +1,13 @@
 # ⚡ EduSpark — Next-Gen AI Academic Ecosystem (KG to PhD)
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-eduspark--8bf63.web.app-FFCA28.svg?logo=firebase)](https://eduspark-8bf63.web.app)
 [![Flutter Version](https://img.shields.io/badge/Flutter-3.x-blue.svg?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2.svg?logo=dart)](https://dart.dev)
 [![AI Engine](https://img.shields.io/badge/Powered%20By-Google%20Gemini%20AI-8E75B2.svg?logo=google)](https://deepmind.google/technologies/gemini/)
 [![Tests](https://img.shields.io/badge/Tests-26%20Passing-success.svg)](#running-tests)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+> 🚀 **Live Web App:** Try EduSpark right in your browser at **[https://eduspark-8bf63.web.app](https://eduspark-8bf63.web.app)**!
 
 **EduSpark** is an AI-native personalized learning and virtual teaching ecosystem crafted for learners and educators across every standard — from Kindergarten and Primary School to Secondary Board Prep, Undergraduate Degrees (B.Tech Engineering, MBBS), and Doctoral / PhD research.
 
