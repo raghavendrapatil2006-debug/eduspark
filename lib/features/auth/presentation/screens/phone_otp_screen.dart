@@ -24,9 +24,6 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
   String? _errorMessage;
   int _countdown = 0;
   Timer? _timer;
-  String? _dispatchedOtp;
-  bool _showSmsBanner = false;
-  Timer? _bannerDismissTimer;
 
   @override
   void initState() {
@@ -39,7 +36,6 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
     _phoneController.dispose();
     _otpController.dispose();
     _timer?.cancel();
-    _bannerDismissTimer?.cancel();
     super.dispose();
   }
 
@@ -81,8 +77,6 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
       _isLoading = false;
       if (res.success) {
         _otpSent = true;
-        _dispatchedOtp = res.otpCode;
-        _showSmsBanner = true;
       } else {
         _errorMessage = res.message;
       }
@@ -90,10 +84,6 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
 
     if (res.success) {
       _startTimer();
-      _bannerDismissTimer?.cancel();
-      _bannerDismissTimer = Timer(const Duration(seconds: 14), () {
-        if (mounted) setState(() => _showSmsBanner = false);
-      });
     }
   }
 
@@ -157,10 +147,8 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
         ),
       ),
       body: SafeArea(
-        child: Stack(
-          children: [
-            Center(
-              child: SingleChildScrollView(
+        child: Center(
+          child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -198,8 +186,8 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
 
                 Text(
                   _otpSent
-                      ? 'We sent a verification code to +91 ${_phoneController.text}'
-                      : 'Enter your phone number to sign in or create an account with OTP.',
+                      ? 'We sent a 6-digit verification code via SMS to +91 ${_phoneController.text}.\nPlease check your SMS messages and enter the code below.'
+                      : 'Enter your phone number to receive a 6-digit verification OTP via SMS.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 13.5,
@@ -425,58 +413,29 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
 
                         const SizedBox(height: 12),
 
-                        // Dynamic OTP auto-paste chip (only appears with active dispatched OTP)
+                        // Resend OTP row
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            if (_dispatchedOtp != null)
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() => _otpController.text = _dispatchedOtp!);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _accentColor.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.content_paste_rounded,
-                                        size: 13,
-                                        color: _accentColor,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Paste Code: $_dispatchedOtp',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color: _accentColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              )
-                            else
-                              const SizedBox.shrink(),
+                            const Text(
+                              'Didn\'t receive the code?',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
                             if (_countdown > 0)
                               Text(
                                 'Resend in ${_countdown}s',
                                 style: const TextStyle(
                                   color: AppColors.textMuted,
                                   fontSize: 12,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               )
                             else
                               GestureDetector(
-                                onTap: _sendOtp,
+                                onTap: _isLoading ? null : _sendOtp,
                                 child: Text(
                                   'Resend OTP',
                                   style: TextStyle(
@@ -546,127 +505,8 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
                     ],
                   ),
                 ),
-                ],
-              ),
+              ],
             ),
-          ),
-          if (_showSmsBanner && _dispatchedOtp != null)
-            _buildSmsNotificationBanner(),
-        ],
-      ),
-    ),
-  );
-  }
-
-  Widget _buildSmsNotificationBanner() {
-    return Positioned(
-      top: 14,
-      left: 16,
-      right: 16,
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF161F33),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: _accentColor.withValues(alpha: 0.5),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.5),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _accentColor.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.mark_chat_unread_rounded,
-                  color: _accentColor,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        const Text(
-                          'Messages • now',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() => _showSmsBanner = false);
-                          },
-                          child: const Icon(
-                            Icons.close_rounded,
-                            size: 16,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Your EduSpark code is $_dispatchedOtp',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              TextButton(
-                onPressed: () {
-                  if (_dispatchedOtp != null) {
-                    setState(() {
-                      _otpController.text = _dispatchedOtp!;
-                      _showSmsBanner = false;
-                    });
-                  }
-                },
-                style: TextButton.styleFrom(
-                  backgroundColor: _accentColor.withValues(alpha: 0.25),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  'Auto-Fill',
-                  style: TextStyle(
-                    color: _accentColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ),

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -20,13 +19,6 @@ class PhoneOtpSendResult {
     this.otpCode,
     this.isFirebaseNative = false,
   });
-}
-
-class _OtpRecord {
-  final String code;
-  final DateTime expiresAt;
-
-  _OtpRecord({required this.code, required this.expiresAt});
 }
 
 class AuthResponse {
@@ -52,8 +44,8 @@ class AuthService extends ChangeNotifier {
 
   UserModel? _currentUser;
   bool _isInitialized = false;
-  final Map<String, _OtpRecord> _activeOtps = {};
   String? _firebaseVerificationId;
+  ConfirmationResult? _webConfirmationResult;
 
   UserModel? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null;
@@ -199,7 +191,34 @@ class AuthService extends ChangeNotifier {
     );
   }
 
-  /// Generate and dispatch a dynamic 6-Digit OTP via Firebase Phone Auth with fallback
+  /// Map Firebase Auth exceptions to clear, actionable user messages
+  String _mapFirebaseAuthError(dynamic e) {
+    if (e is FirebaseAuthException) {
+      switch (e.code) {
+        case 'operation-not-allowed':
+        case 'admin-restricted-operation':
+          return 'Phone Authentication is not enabled in Firebase Console. Please go to Firebase Console > Authentication > Sign-in method and enable "Phone".';
+        case 'unauthorized-domain':
+          return 'Domain not authorized in Firebase. Please add this domain to Firebase Console > Authentication > Settings > Authorized domains.';
+        case 'invalid-phone-number':
+          return 'Invalid mobile number format. Please enter a valid 10-digit number.';
+        case 'quota-exceeded':
+        case 'too-many-requests':
+          return 'SMS quota exceeded or too many requests. Please try again later or add test phone numbers in Firebase Console.';
+        case 'captcha-check-failed':
+          return 'reCAPTCHA verification failed. Please refresh the page and try again.';
+        case 'invalid-verification-code':
+          return 'Incorrect OTP code entered. Please check your SMS inbox and try again.';
+        case 'session-expired':
+          return 'The verification code has expired. Please tap "Resend OTP".';
+        default:
+          return e.message ?? 'Authentication error: ${e.code}';
+      }
+    }
+    return e.toString();
+  }
+
+  /// Dispatch a real SMS verification code via Firebase Phone Auth
   Future<PhoneOtpSendResult> sendPhoneOtp({required String phone}) async {
     final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
     if (cleanPhone.length < 10) {
@@ -209,31 +228,57 @@ class AuthService extends ChangeNotifier {
       );
     }
 
-    // Try Firebase Authentication Phone verification
-    try {
-      final formattedPhone = cleanPhone.startsWith('91') || cleanPhone.startsWith('+')
-          ? (cleanPhone.startsWith('+') ? cleanPhone : '+$cleanPhone')
-          : '+91$cleanPhone';
+    final formattedPhone = cleanPhone.startsWith('91') || cleanPhone.startsWith('+')
+        ? (cleanPhone.startsWith('+') ? cleanPhone : '+$cleanPhone')
+        : '+91$cleanPhone';
 
+    // 1. Web Firebase Phone Auth (uses signInWithPhoneNumber & ConfirmationResult)
+    if (kIsWeb) {
+      try {
+        debugPrint('Initiating Firebase Phone Auth for Web: $formattedPhone');
+        final confirmationResult = await FirebaseAuth.instance.signInWithPhoneNumber(formattedPhone);
+        _webConfirmationResult = confirmationResult;
+        return PhoneOtpSendResult(
+          success: true,
+          message: 'SMS verification code sent to $formattedPhone. Please check your phone messages.',
+          isFirebaseNative: true,
+        );
+      } on FirebaseAuthException catch (e) {
+        debugPrint('Firebase Web Phone Auth failed: ${e.code} - ${e.message}');
+        return PhoneOtpSendResult(
+          success: false,
+          message: _mapFirebaseAuthError(e),
+          isFirebaseNative: true,
+        );
+      } catch (e) {
+        debugPrint('Firebase Web Phone Auth unexpected exception: $e');
+        return PhoneOtpSendResult(
+          success: false,
+          message: 'Unable to send SMS: $e',
+          isFirebaseNative: true,
+        );
+      }
+    }
+
+    // 2. Mobile/Native Firebase Phone Auth (uses verifyPhoneNumber)
+    try {
       final completer = Completer<PhoneOtpSendResult>();
 
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: formattedPhone,
-        timeout: const Duration(seconds: 25),
+        timeout: const Duration(seconds: 60),
         verificationCompleted: (PhoneAuthCredential credential) async {
           try {
             await FirebaseAuth.instance.signInWithCredential(credential);
           } catch (_) {}
         },
         verificationFailed: (FirebaseAuthException e) {
-          debugPrint('Firebase phone verification failed: ${e.code} - ${e.message}');
+          debugPrint('Firebase mobile phone verification failed: ${e.code} - ${e.message}');
           if (!completer.isCompleted) {
-            final code = _generateDynamicOtp(cleanPhone);
             completer.complete(PhoneOtpSendResult(
-              success: true,
-              otpCode: code,
-              message: 'Verification code generated for $formattedPhone',
-              isFirebaseNative: false,
+              success: false,
+              message: _mapFirebaseAuthError(e),
+              isFirebaseNative: true,
             ));
           }
         },
@@ -243,7 +288,7 @@ class AuthService extends ChangeNotifier {
           if (!completer.isCompleted) {
             completer.complete(PhoneOtpSendResult(
               success: true,
-              message: 'SMS verification code sent to $formattedPhone',
+              message: 'SMS verification code sent to $formattedPhone. Please check your phone messages.',
               isFirebaseNative: true,
             ));
           }
@@ -253,41 +298,18 @@ class AuthService extends ChangeNotifier {
         },
       );
 
-      return await completer.future.timeout(
-        const Duration(seconds: 4),
-        onTimeout: () {
-          final code = _generateDynamicOtp(cleanPhone);
-          return PhoneOtpSendResult(
-            success: true,
-            otpCode: code,
-            message: 'Verification code dispatched to +91 $cleanPhone',
-            isFirebaseNative: false,
-          );
-        },
-      );
+      return await completer.future;
     } catch (e) {
-      debugPrint('Firebase verifyPhoneNumber exception: $e');
-      final code = _generateDynamicOtp(cleanPhone);
+      debugPrint('Firebase mobile verifyPhoneNumber exception: $e');
       return PhoneOtpSendResult(
-        success: true,
-        otpCode: code,
-        message: 'Verification code dispatched to +91 $cleanPhone',
-        isFirebaseNative: false,
+        success: false,
+        message: 'Unable to send SMS: $e',
+        isFirebaseNative: true,
       );
     }
   }
 
-  String _generateDynamicOtp(String phone) {
-    // Generate fresh random 6-digit number (100000 to 999999)
-    final randomOtp = (100000 + Random().nextInt(900000)).toString();
-    _activeOtps[phone] = _OtpRecord(
-      code: randomOtp,
-      expiresAt: DateTime.now().add(const Duration(minutes: 5)),
-    );
-    return randomOtp;
-  }
-
-  /// Sign in with Phone Number and 6-Digit OTP (Validates against Firebase and Dynamic OTP store)
+  /// Sign in with Phone Number and SMS OTP using Firebase Authentication
   Future<AuthResponse> signInWithPhoneOtp({
     required String phone,
     required String otp,
@@ -306,56 +328,50 @@ class AuthService extends ChangeNotifier {
     if (cleanOtp.length != 6) {
       return const AuthResponse(
         success: false,
-        message: 'Please enter the full 6-digit verification code.',
+        message: 'Please enter the full 6-digit verification code received via SMS.',
       );
     }
 
-    bool isValid = false;
+    UserCredential? userCredential;
 
-    // 1. Try Firebase Credential verification if active verificationId exists
-    if (_firebaseVerificationId != null) {
+    // 1. Web Firebase Phone Auth Confirmation
+    if (kIsWeb && _webConfirmationResult != null) {
+      try {
+        userCredential = await _webConfirmationResult!.confirm(cleanOtp);
+      } catch (e) {
+        debugPrint('Firebase Web confirmation failed: $e');
+        return AuthResponse(
+          success: false,
+          message: _mapFirebaseAuthError(e),
+        );
+      }
+    } else if (_firebaseVerificationId != null) {
+      // 2. Mobile Firebase Phone Auth Credential
       try {
         final credential = PhoneAuthProvider.credential(
           verificationId: _firebaseVerificationId!,
           smsCode: cleanOtp,
         );
-        final userCred = await FirebaseAuth.instance.signInWithCredential(credential);
-        if (userCred.user != null) {
-          isValid = true;
-        }
+        userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       } catch (e) {
-        debugPrint('Firebase phone credential verify error: $e');
+        debugPrint('Firebase mobile credential confirmation failed: $e');
+        return AuthResponse(
+          success: false,
+          message: _mapFirebaseAuthError(e),
+        );
       }
-    }
-
-    // 2. Validate against dynamic generated OTP record
-    if (!isValid) {
-      final record = _activeOtps[cleanPhone];
-      if (record != null) {
-        if (DateTime.now().isAfter(record.expiresAt)) {
-          return const AuthResponse(
-            success: false,
-            message: 'Verification code has expired. Please request a new OTP.',
-          );
-        }
-        if (record.code == cleanOtp) {
-          isValid = true;
-          _activeOtps.remove(cleanPhone); // Invalidate once used
-        }
-      }
-    }
-
-    if (!isValid) {
+    } else {
       return const AuthResponse(
         success: false,
-        message: 'Incorrect verification code. Please check your SMS and try again.',
+        message: 'No active verification session. Please tap Resend OTP.',
       );
     }
 
+    final fbUser = userCredential.user;
     final user = UserModel(
-      id: 'usr_otp_${DateTime.now().millisecondsSinceEpoch}',
-      name: 'Scholar (+${cleanPhone.substring(cleanPhone.length - 4)})',
-      email: 'mobile.$cleanPhone@eduspark.ai',
+      id: fbUser?.uid ?? 'usr_otp_${DateTime.now().millisecondsSinceEpoch}',
+      name: fbUser?.displayName ?? 'Scholar (+${cleanPhone.substring(cleanPhone.length - 4)})',
+      email: fbUser?.email ?? 'mobile.$cleanPhone@eduspark.ai',
       phone: cleanPhone,
       role: role.toLowerCase(),
       standard: role.toLowerCase() == 'student'
@@ -369,7 +385,7 @@ class AuthService extends ChangeNotifier {
     await _persistSession(user);
     return AuthResponse(
       success: true,
-      message: 'Mobile verification verified successfully!',
+      message: 'Mobile verification verified successfully via Firebase!',
       user: user,
     );
   }
