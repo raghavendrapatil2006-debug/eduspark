@@ -193,29 +193,87 @@ class AuthService extends ChangeNotifier {
 
   /// Map Firebase Auth exceptions to clear, actionable user messages
   String _mapFirebaseAuthError(dynamic e) {
+    debugPrint('AuthService _mapFirebaseAuthError: $e (${e.runtimeType})');
+
+    String? code;
+    String? message;
+
     if (e is FirebaseAuthException) {
-      switch (e.code) {
-        case 'operation-not-allowed':
-        case 'admin-restricted-operation':
-          return 'Phone Authentication is not enabled in Firebase Console. Please go to Firebase Console > Authentication > Sign-in method and enable "Phone".';
-        case 'unauthorized-domain':
-          return 'Domain not authorized in Firebase. Please add this domain to Firebase Console > Authentication > Settings > Authorized domains.';
-        case 'invalid-phone-number':
-          return 'Invalid mobile number format. Please enter a valid 10-digit number.';
-        case 'quota-exceeded':
-        case 'too-many-requests':
-          return 'SMS quota exceeded or too many requests. Please try again later or add test phone numbers in Firebase Console.';
-        case 'captcha-check-failed':
-          return 'reCAPTCHA verification failed. Please refresh the page and try again.';
-        case 'invalid-verification-code':
-          return 'Incorrect OTP code entered. Please check your SMS inbox and try again.';
-        case 'session-expired':
-          return 'The verification code has expired. Please tap "Resend OTP".';
-        default:
-          return e.message ?? 'Authentication error: ${e.code}';
-      }
+      code = e.code;
+      message = e.message;
+    } else if (e is FirebaseException) {
+      code = e.code;
+      message = e.message;
+    } else {
+      try {
+        final dynamic dyn = e;
+        code = dyn.code?.toString();
+        message = dyn.message?.toString();
+      } catch (_) {}
     }
-    return e.toString();
+
+    final raw = e?.toString() ?? '';
+    final lower = raw.toLowerCase();
+    final codeLower = (code ?? '').toLowerCase();
+
+    if (codeLower.contains('configuration-not-found') ||
+        lower.contains('configuration-not-found')) {
+      return 'Firebase Authentication is not activated in project "eduspark-8bf63". In Firebase Console, go to Authentication > click "Get started", enable Phone & Google, and ensure "Identity Toolkit API" is allowed in Google Cloud API key restrictions.';
+    }
+
+    if (codeLower.contains('operation-not-allowed') ||
+        lower.contains('operation-not-allowed') ||
+        lower.contains('admin-restricted-operation')) {
+      return 'Phone Authentication is not enabled in your Firebase Console. Please go to Firebase Console > Authentication > Sign-in method and enable "Phone".';
+    }
+
+    if (codeLower.contains('unauthorized-domain') ||
+        lower.contains('unauthorized-domain') ||
+        lower.contains('auth/unauthorized-domain')) {
+      return 'Domain not authorized in Firebase. Please add "eduspark-mocha.vercel.app" to Firebase Console > Authentication > Settings > Authorized domains.';
+    }
+
+    if (codeLower.contains('invalid-phone-number') ||
+        lower.contains('invalid-phone-number')) {
+      return 'Invalid mobile number format. Please check the 10 digits and try again.';
+    }
+
+    if (codeLower.contains('quota-exceeded') ||
+        lower.contains('quota-exceeded') ||
+        codeLower.contains('too-many-requests') ||
+        lower.contains('too-many-requests')) {
+      return 'SMS quota exceeded for today in Firebase. You can add test phone numbers in Firebase Console for free unlimited testing.';
+    }
+
+    if (codeLower.contains('captcha-check-failed') ||
+        lower.contains('captcha') ||
+        lower.contains('recaptcha')) {
+      return 'reCAPTCHA verification failed. Please refresh the page and try again.';
+    }
+
+    if (codeLower.contains('invalid-verification-code') ||
+        lower.contains('invalid-verification-code')) {
+      return 'Incorrect OTP code entered. Please check your SMS inbox and try again.';
+    }
+
+    if (codeLower.contains('session-expired') ||
+        lower.contains('session-expired')) {
+      return 'The verification code has expired. Please tap "Resend OTP".';
+    }
+
+    if (message != null &&
+        message.trim().isNotEmpty &&
+        message.trim().toLowerCase() != 'error') {
+      return message;
+    }
+
+    if (raw.trim().isNotEmpty &&
+        raw.trim().toLowerCase() != 'error' &&
+        raw.trim().toLowerCase() != 'exception') {
+      return raw;
+    }
+
+    return 'Phone verification failed: Firebase Phone Auth must be enabled in Firebase Console (Authentication > Sign-in method) and this domain added to Authorized Domains.';
   }
 
   /// Dispatch a real SMS verification code via Firebase Phone Auth

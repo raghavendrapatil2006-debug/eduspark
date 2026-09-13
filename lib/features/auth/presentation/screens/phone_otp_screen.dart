@@ -221,11 +221,15 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
                             ),
                           ),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(
-                                Icons.error_outline_rounded,
-                                color: AppColors.danger,
-                                size: 18,
+                              const Padding(
+                                padding: EdgeInsets.only(top: 1),
+                                child: Icon(
+                                  Icons.error_outline_rounded,
+                                  color: AppColors.danger,
+                                  size: 18,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -233,7 +237,9 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
                                   _errorMessage!,
                                   style: const TextStyle(
                                     color: AppColors.danger,
-                                    fontSize: 12,
+                                    fontSize: 12.5,
+                                    height: 1.4,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),

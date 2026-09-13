@@ -11,8 +11,6 @@ import '../widgets/ai_question_paper_sheet.dart';
 import '../widgets/create_assignment_sheet.dart';
 import '../widgets/teacher_class_roster_sheet.dart';
 import '../widgets/teacher_announcements_sheet.dart';
-import '../widgets/mock_classroom_simulator_sheet.dart';
-import 'teacher_training_screen.dart';
 import '../../../../core/services/online_class_service.dart';
 import '../../../../core/services/teacher_curriculum_service.dart';
 import '../widgets/online_classes_hub_sheet.dart';
@@ -147,21 +145,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const TeacherAnnouncementsSheet(),
-    );
-  }
-
-  void _openTrainingScreen() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const TeacherTrainingScreen()),
-    );
-  }
-
-  void _openClassroomSimulator() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const MockClassroomSimulatorSheet(),
     );
   }
 
@@ -382,111 +365,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 onReviewsTap: () => setState(() => _currentIndex = 3),
               ),
 
-              const SizedBox(height: 18),
-
-              // Teacher Training & Induction Banner Card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary.withValues(alpha: 0.18),
-                      const Color(0xFF818CF8).withValues(alpha: 0.10),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.35),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.school_rounded,
-                        color: AppColors.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Text(
-                                'Teacher Training & Induction',
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.secondary.withValues(alpha: 0.18),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  '3/5 Done',
-                                  style: TextStyle(
-                                    color: AppColors.secondary,
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          const Text(
-                            'AI Teaching Simulator, KG-PhD Pedagogy & Certification',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 11.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _openTrainingScreen,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        'Enter Hub',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
 
               // Teacher Quick Actions
               TeacherQuickActions(
@@ -964,35 +843,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
         const SizedBox(height: 14),
 
-        // Tool 5: Teacher Training & Certification
-        _aiToolCard(
-          icon: Icons.school_rounded,
-          iconColor: AppColors.primary,
-          title: 'Teacher Training & Certification Track',
-          subtitle:
-              'Complete professional masterclasses on KG-to-PhD adaptive teaching, lesson design, and assessment rubrics to earn your official AI Educator Diploma.',
-          badge: 'Faculty Professional Development',
-          actionText: 'Open Training Hub',
-          onTap: _openTrainingScreen,
-        ),
-
-        const SizedBox(height: 14),
-
-        // Tool 6: Mock Classroom Teaching Simulator
-        _aiToolCard(
-          icon: Icons.record_voice_over_rounded,
-          iconColor: AppColors.secondary,
-          title: 'AI Classroom Teaching Simulator',
-          subtitle:
-              'Practice delivering difficult conceptual topics in front of simulated AI students with different learning styles, and receive an AI Mentor Score.',
-          badge: 'Pedagogical Practice Lab',
-          actionText: 'Enter Simulator Lab',
-          onTap: _openClassroomSimulator,
-        ),
-
-        const SizedBox(height: 14),
-
-        // Tool 7: Virtual Classroom Stage & Live AI Notes
+        // Tool 5: Virtual Classroom Stage & Live AI Notes
         _aiToolCard(
           icon: Icons.videocam_rounded,
           iconColor: const Color(0xFFEF4444),
