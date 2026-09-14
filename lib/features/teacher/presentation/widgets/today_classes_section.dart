@@ -49,18 +49,19 @@ class TodayClassesSection extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              "Today's Teaching Schedule",
+              "Today's Schedule",
               style: TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 17,
+                fontSize: 16.5,
                 fontWeight: FontWeight.w800,
+                letterSpacing: -0.2,
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 '${classes.length} Sessions',
@@ -73,13 +74,33 @@ class TodayClassesSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 14),
-        ...classes.map((cls) => _ClassScheduleCard(
-              item: cls,
-              onTakeAttendance: () => onTakeAttendance?.call(cls),
-              onViewRoster: () => onViewRoster?.call(cls),
-              onJoinLiveStage: () => onJoinLiveStage?.call(cls),
-            )),
+        const SizedBox(height: 12),
+        if (classes.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: const Center(
+              child: Text(
+                'No classes scheduled for today.',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          )
+        else
+          ...classes.map((cls) => _ClassScheduleCard(
+                item: cls,
+                onTakeAttendance: () => onTakeAttendance?.call(cls),
+                onViewRoster: () => onViewRoster?.call(cls),
+                onJoinLiveStage: () => onJoinLiveStage?.call(cls),
+              )),
       ],
     );
   }
@@ -104,28 +125,26 @@ class _ClassScheduleCard extends StatelessWidget {
     final isCompleted = item.status == 'completed';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLive
-              ? AppColors.primary
-              : AppColors.border,
+          color: isLive ? AppColors.primary.withValues(alpha: 0.6) : AppColors.border,
           width: isLive ? 1.5 : 1.0,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: Standard tag + Status chip
+          // Header: Standard tag + Status badge
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                 decoration: BoxDecoration(
-                  color: item.badgeColor.withValues(alpha: 0.15),
+                  color: item.badgeColor.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -138,39 +157,42 @@ class _ClassScheduleCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                item.className,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w800,
+              Expanded(
+                child: Text(
+                  item.className,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
               _buildStatusBadge(item.status),
             ],
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
-          // Subject & Topic
+          // Subject name
           Text(
             item.subject,
             style: const TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
-          // Time, Room & Students
+          // Time, Room, and Students count
           Row(
             children: [
               const Icon(
                 Icons.access_time_rounded,
-                size: 14,
+                size: 13.5,
                 color: AppColors.textMuted,
               ),
               const SizedBox(width: 4),
@@ -178,14 +200,14 @@ class _ClassScheduleCard extends StatelessWidget {
                 item.time,
                 style: const TextStyle(
                   color: AppColors.textSecondary,
-                  fontSize: 12,
+                  fontSize: 11.5,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(width: 14),
               const Icon(
                 Icons.location_on_outlined,
-                size: 14,
+                size: 13.5,
                 color: AppColors.textMuted,
               ),
               const SizedBox(width: 4),
@@ -193,14 +215,14 @@ class _ClassScheduleCard extends StatelessWidget {
                 item.room,
                 style: const TextStyle(
                   color: AppColors.textSecondary,
-                  fontSize: 12,
+                  fontSize: 11.5,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(width: 14),
               const Icon(
                 Icons.people_outline_rounded,
-                size: 14,
+                size: 13.5,
                 color: AppColors.textMuted,
               ),
               const SizedBox(width: 4),
@@ -208,88 +230,84 @@ class _ClassScheduleCard extends StatelessWidget {
                 '${item.studentCount} Students',
                 style: const TextStyle(
                   color: AppColors.textSecondary,
-                  fontSize: 12,
+                  fontSize: 11.5,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
 
-          if (isLive) ...[
-            SizedBox(
-              width: double.infinity,
-              height: 42,
-              child: ElevatedButton.icon(
-                onPressed: onJoinLiveStage,
-                icon: const Icon(Icons.videocam_rounded, size: 18),
-                label: const Text(
-                  'Enter Live Broadcast Stage',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.danger,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
+          const SizedBox(height: 12),
 
           // Actions row
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onViewRoster,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: const BorderSide(color: AppColors.border),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              if (isLive) ...[
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: onJoinLiveStage,
+                    icon: const Icon(Icons.videocam_rounded, size: 16),
+                    label: const Text(
+                      'Join Live Stage',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                  ),
-                  icon: const Icon(Icons.people_alt_rounded, size: 16),
-                  label: const Text(
-                    'Class Roster',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: onTakeAttendance,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isCompleted
-                        ? AppColors.surfaceLight
-                        : AppColors.primary,
-                    foregroundColor: isCompleted
-                        ? AppColors.textSecondary
-                        : Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                const SizedBox(width: 8),
+              ] else ...[
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: onTakeAttendance,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isCompleted
+                          ? AppColors.surfaceLight
+                          : AppColors.primary,
+                      foregroundColor: isCompleted
+                          ? AppColors.textSecondary
+                          : Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    icon: Icon(
+                      isCompleted
+                          ? Icons.check_circle_outline_rounded
+                          : Icons.checklist_rounded,
+                      size: 15,
+                    ),
+                    label: Text(
+                      isCompleted ? 'Attendance Marked' : 'Take Attendance',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
                   ),
-                  icon: Icon(
-                    isCompleted
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.fact_check_rounded,
-                    size: 16,
+                ),
+                const SizedBox(width: 8),
+              ],
+              OutlinedButton.icon(
+                onPressed: onViewRoster,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textPrimary,
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  label: Text(
-                    isCompleted ? 'Attendance Marked' : 'Attendance',
-                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                icon: const Icon(Icons.badge_outlined, size: 14),
+                label: const Text(
+                  'Roster',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -303,23 +321,24 @@ class _ClassScheduleCard extends StatelessWidget {
     switch (status) {
       case 'live':
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.15),
+            color: const Color(0xFFEF4444).withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+            border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
           ),
           child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircleAvatar(radius: 3, backgroundColor: AppColors.primary),
+              CircleAvatar(radius: 3, backgroundColor: Color(0xFFEF4444)),
               SizedBox(width: 4),
               Text(
                 'LIVE NOW',
                 style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 10,
+                  color: Color(0xFFEF4444),
+                  fontSize: 9.5,
                   fontWeight: FontWeight.w800,
+                  letterSpacing: 0.4,
                 ),
               ),
             ],
@@ -327,7 +346,7 @@ class _ClassScheduleCard extends StatelessWidget {
         );
       case 'completed':
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
           decoration: BoxDecoration(
             color: AppColors.success.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(6),
@@ -336,14 +355,14 @@ class _ClassScheduleCard extends StatelessWidget {
             'Completed',
             style: TextStyle(
               color: AppColors.success,
-              fontSize: 10.5,
+              fontSize: 10,
               fontWeight: FontWeight.w700,
             ),
           ),
         );
       default:
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
           decoration: BoxDecoration(
             color: AppColors.surfaceLight,
             borderRadius: BorderRadius.circular(6),
@@ -352,7 +371,7 @@ class _ClassScheduleCard extends StatelessWidget {
             'Upcoming',
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontSize: 10.5,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
             ),
           ),

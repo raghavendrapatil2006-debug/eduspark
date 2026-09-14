@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/online_class_service.dart';
 
 class LiveClassroomStageScreen extends StatefulWidget {
@@ -432,9 +433,9 @@ class _LiveClassroomStageScreenState extends State<LiveClassroomStageScreen>
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text(
-                  'Prof. Raghavendra (You)',
-                  style: TextStyle(
+                Text(
+                  '${AuthService.instance.currentUser?.name ?? "Host"} (You)',
+                  style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w800,
                     fontSize: 16,

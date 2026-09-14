@@ -13,6 +13,8 @@ import '../widgets/teacher_class_roster_sheet.dart';
 import '../widgets/teacher_announcements_sheet.dart';
 import '../../../../core/services/online_class_service.dart';
 import '../../../../core/services/teacher_curriculum_service.dart';
+import '../../../../core/services/teacher_student_roster_service.dart';
+import '../../../../core/services/auth_service.dart';
 import '../widgets/online_classes_hub_sheet.dart';
 import '../widgets/teacher_standard_picker_sheet.dart';
 import 'live_classroom_stage_screen.dart';
@@ -26,42 +28,97 @@ class TeacherDashboardScreen extends StatefulWidget {
 
 class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   int _currentIndex = 0;
-  final String _teacherName = 'Prof. Raghavendra';
-  final int _unreadNotifications = 3;
+  String get _teacherName {
+    final user = AuthService.instance.currentUser;
+    if (user != null &&
+        user.role == 'teacher' &&
+        user.name.trim().isNotEmpty &&
+        user.name.trim() != 'Faculty Member') {
+      return user.name.trim();
+    }
+    return 'Guest';
+  }
+
+  final int _unreadNotifications = 0;
 
   List<ClassScheduleItem> _classes = [];
   List<AtRiskStudent> _atRiskStudents = [];
   List<Map<String, dynamic>> _homeworkList = [];
   List<Map<String, dynamic>> _pendingGrading = [];
+  int _totalRegisteredStudents = 0;
+  double _overallAttendance = 100.0;
 
   @override
   void initState() {
     super.initState();
     _loadAdaptiveData();
     TeacherCurriculumService.instance.addListener(_onCurriculumChanged);
+    TeacherStudentRosterService.instance.addListener(_onRosterChanged);
+    AuthService.instance.addListener(_onAuthChanged);
     TeacherCurriculumService.instance.init();
   }
 
   @override
   void dispose() {
     TeacherCurriculumService.instance.removeListener(_onCurriculumChanged);
+    TeacherStudentRosterService.instance.removeListener(_onRosterChanged);
+    AuthService.instance.removeListener(_onAuthChanged);
     super.dispose();
+  }
+
+  void _onAuthChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _onRosterChanged() {
+    if (mounted) {
+      _loadAdaptiveData();
+    }
   }
 
   void _onCurriculumChanged() {
     if (mounted) {
-      setState(() {
-        _loadAdaptiveData();
-      });
+      _loadAdaptiveData();
     }
   }
 
-  void _loadAdaptiveData() {
+  Future<void> _loadAdaptiveData() async {
     final cur = TeacherCurriculumService.instance;
-    _classes = List.from(cur.getAdaptiveSchedule());
-    _atRiskStudents = List.from(cur.getAdaptiveAtRiskStudents());
-    _homeworkList = List.from(cur.getAdaptiveHomeworkList());
-    _pendingGrading = List.from(cur.getAdaptivePendingGrading());
+    final roster = TeacherStudentRosterService.instance;
+    final baseClasses = cur.getAdaptiveSchedule();
+    final realClasses = <ClassScheduleItem>[];
+    for (final cls in baseClasses) {
+      final students = await roster.getStudentsForClass(cls.className);
+      realClasses.add(
+        ClassScheduleItem(
+          classId: cls.classId,
+          className: cls.className,
+          standardBadge: cls.standardBadge,
+          subject: cls.subject,
+          time: cls.time,
+          room: cls.room,
+          studentCount: students.length,
+          status: cls.status,
+          badgeColor: cls.badgeColor,
+        ),
+      );
+    }
+    final atRisk = await roster.getAtRiskStudents();
+    final totalCount = await roster.getTotalStudentCount();
+    final avgAtt = await roster.getOverallAttendancePercentage();
+
+    if (mounted) {
+      setState(() {
+        _classes = realClasses;
+        _atRiskStudents = atRisk;
+        _homeworkList = List.from(cur.getAdaptiveHomeworkList());
+        _pendingGrading = List.from(cur.getAdaptivePendingGrading());
+        _totalRegisteredStudents = totalCount;
+        _overallAttendance = avgAtt;
+      });
+    }
   }
 
   // Action Modals
@@ -181,14 +238,14 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       builder: (dialogCtx) {
         return AlertDialog(
           backgroundColor: AppColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
-              const Icon(Icons.grading_rounded, color: AppColors.primary, size: 22),
-              const SizedBox(width: 10),
+              const Icon(Icons.grading_rounded, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
               Text(
-                'Grade ${submission['student']}',
-                style: const TextStyle(color: AppColors.textPrimary, fontSize: 17),
+                'Review: ${submission['student']}',
+                style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ],
           ),
@@ -198,7 +255,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             children: [
               Text(
                 '${submission['assignment']} • ${submission['class']}',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
               ),
               const SizedBox(height: 10),
               Container(
@@ -229,7 +286,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.background,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -241,11 +302,15 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               TextField(
                 controller: feedbackController,
                 maxLines: 2,
-                style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                style: const TextStyle(color: AppColors.textPrimary, fontSize: 12.5),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.background,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.all(10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
                 ),
               ),
             ],
@@ -253,7 +318,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogCtx).pop(),
-              child: const Text('Cancel'),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -264,14 +329,19 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Graded ${submission['student']} (${gradeController.text}/100)! Feedback sent.',
+                      'Graded ${submission['student']} (${gradeController.text}/100)! Feedback recorded.',
                     ),
                     behavior: SnackBarBehavior.floating,
                     backgroundColor: AppColors.success,
                   ),
                 );
               },
-              child: const Text('Submit & Return'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Save & Return'),
             ),
           ],
         );
@@ -312,12 +382,12 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             NavigationDestination(
               icon: Icon(Icons.dashboard_outlined, color: AppColors.textSecondary),
               selectedIcon: Icon(Icons.dashboard_rounded, color: AppColors.primary),
-              label: 'Dashboard',
+              label: 'Overview',
             ),
             NavigationDestination(
               icon: Icon(Icons.groups_outlined, color: AppColors.textSecondary),
               selectedIcon: Icon(Icons.groups_rounded, color: AppColors.primary),
-              label: 'My Classes',
+              label: 'Batches',
             ),
             NavigationDestination(
               icon: Icon(Icons.auto_awesome_outlined, color: AppColors.textSecondary),
@@ -353,21 +423,21 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 onNotificationTap: _openAnnouncements,
               ),
 
-              const SizedBox(height: 22),
+              const SizedBox(height: 18),
 
               // Stats Grid
               TeacherStatsGrid(
-                totalStudents: 148,
+                totalStudents: _totalRegisteredStudents,
                 activeBatches: _classes.length,
                 pendingReviews: _pendingGrading.length,
-                avgAttendance: 94.2,
+                avgAttendance: _overallAttendance,
                 onBatchesTap: () => setState(() => _currentIndex = 1),
                 onReviewsTap: () => setState(() => _currentIndex = 3),
               ),
 
-              const SizedBox(height: 22),
+              const SizedBox(height: 18),
 
-              // Teacher Quick Actions
+              // Teacher Quick Actions (Executive Action Bar)
               TeacherQuickActions(
                 onOnlineClass: _openOnlineClassesHub,
                 onCreateAssignment: _openCreateAssignment,
@@ -376,7 +446,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 onBroadcast: _openAnnouncements,
               ),
 
-              const SizedBox(height: 26),
+              const SizedBox(height: 22),
 
               // Today's Classes & Schedule
               TodayClassesSection(
@@ -386,9 +456,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 onJoinLiveStage: (cls) => _openLiveClass(cls),
               ),
 
-              const SizedBox(height: 22),
+              const SizedBox(height: 18),
 
-              // AI Attention Alerts (At-Risk Students)
+              // Student Support Radar
               AtRiskStudentsCard(
                 students: _atRiskStudents,
                 onAssignPractice: (st) {
@@ -397,7 +467,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 onSendNote: (st) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Encouragement note sent to ${st.name}!'),
+                      content: Text('Follow-up note sent to ${st.name}.'),
                       behavior: SnackBarBehavior.floating,
                       backgroundColor: AppColors.success,
                     ),
@@ -405,30 +475,33 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 },
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // Quick Grading Queue
+              // Pending Submissions Grading Queue
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Pending Submissions to Grade',
+                    'Pending Reviews',
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 16.5,
                       fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.secondary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
+                      color: _pendingGrading.isEmpty
+                          ? AppColors.success.withValues(alpha: 0.15)
+                          : AppColors.secondary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      '${_pendingGrading.length} Due',
-                      style: const TextStyle(
-                        color: AppColors.secondary,
+                      _pendingGrading.isEmpty ? '0 Due' : '${_pendingGrading.length} Due',
+                      style: TextStyle(
+                        color: _pendingGrading.isEmpty ? AppColors.success : AppColors.secondary,
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                       ),
@@ -436,11 +509,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               if (_pendingGrading.isEmpty)
                 Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
@@ -449,13 +522,14 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   child: const Center(
                     child: Column(
                       children: [
-                        Icon(Icons.check_circle_rounded, color: AppColors.success, size: 36),
-                        SizedBox(height: 8),
+                        Icon(Icons.check_circle_outline_rounded, color: AppColors.success, size: 32),
+                        SizedBox(height: 6),
                         Text(
-                          'All caught up! No submissions awaiting grading.',
+                          'All caught up! No pending submissions.',
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.w700,
+                            fontSize: 13,
                           ),
                         ),
                       ],
@@ -464,27 +538,28 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 )
               else
                 ..._pendingGrading.map((sub) => Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: AppColors.border),
                       ),
                       child: Row(
                         children: [
                           CircleAvatar(
-                            radius: 18,
+                            radius: 16,
                             backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                             child: Text(
                               sub['student'][0],
                               style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w800,
+                                fontSize: 13,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -493,7 +568,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                                   sub['student'],
                                   style: const TextStyle(
                                     color: AppColors.textPrimary,
-                                    fontSize: 14,
+                                    fontSize: 13.5,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
@@ -501,37 +576,45 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                                   '${sub['assignment']} • ${sub['class']}',
                                   style: const TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontSize: 11.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  sub['autoScore'],
-                                  style: const TextStyle(
-                                    color: AppColors.success,
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
                             ),
                           ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              sub['autoScore'],
+                              style: const TextStyle(
+                                color: AppColors.success,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
                           ElevatedButton(
                             onPressed: () => _gradeSubmission(sub),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
+                                horizontal: 10,
+                                vertical: 6,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                               ),
+                              elevation: 0,
                             ),
                             child: const Text(
                               'Review',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
                             ),
                           ),
                         ],
@@ -560,11 +643,12 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'My Classes & Batches',
+                    'My Batches & Cohorts',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -595,14 +679,14 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           ],
         ),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
 
         ..._classes.map((cls) => Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(18),
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.border),
               ),
               child: Column(
@@ -611,16 +695,16 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: cls.badgeColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           cls.standardBadge,
                           style: TextStyle(
                             color: cls.badgeColor,
-                            fontSize: 11,
+                            fontSize: 10.5,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -630,42 +714,40 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                         cls.className,
                         style: const TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const Spacer(),
-                      const Icon(Icons.more_vert_rounded, color: AppColors.textMuted, size: 18),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Text(
                     cls.subject,
                     style: const TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 14.5,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.people_alt_rounded, size: 15, color: AppColors.textMuted),
-                      const SizedBox(width: 5),
+                      const Icon(Icons.people_alt_outlined, size: 14, color: AppColors.textMuted),
+                      const SizedBox(width: 4),
                       Text(
-                        '${cls.studentCount} Students Enrolled',
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+                        '${cls.studentCount} Students',
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                       ),
-                      const SizedBox(width: 16),
-                      const Icon(Icons.schedule_rounded, size: 15, color: AppColors.textMuted),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 14),
+                      const Icon(Icons.schedule_rounded, size: 14, color: AppColors.textMuted),
+                      const SizedBox(width: 4),
                       Text(
                         cls.time,
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   Row(
                     children: [
                       Expanded(
@@ -674,14 +756,14 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: AppColors.border),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.symmetric(vertical: 9),
                           ),
-                          icon: const Icon(Icons.badge_rounded, size: 16),
+                          icon: const Icon(Icons.badge_outlined, size: 15),
                           label: const Text(
                             'Student Roster',
-                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                           ),
                         ),
                       ),
@@ -693,14 +775,15 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            elevation: 0,
                           ),
-                          icon: const Icon(Icons.checklist_rounded, size: 16),
+                          icon: const Icon(Icons.fact_check_rounded, size: 15),
                           label: const Text(
-                            'Take Attendance',
-                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                            'Attendance',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                           ),
                         ),
                       ),
@@ -714,76 +797,57 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   }
 
   // ============================================================
-  // TAB 2: AI TEACHING SUITE
+  // TAB 2: AI TEACHING SUITE (Clean, Professional, No Filler)
   // ============================================================
   Widget _buildAiSuiteTab() {
     return ListView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
       children: [
-        // AI Suite Banner
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF4F8EF7).withValues(alpha: 0.25),
-                const Color(0xFF818CF8).withValues(alpha: 0.15),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        // Suite Header
+        Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                color: AppColors.secondary,
+                size: 20,
+              ),
             ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(
-                      Icons.auto_awesome_rounded,
-                      color: AppColors.primary,
-                      size: 24,
+                  Text(
+                    'AI Teaching Suite',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'EduSpark AI for Educators',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          'Smart generative tools to save hours of prep time',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    'Generative pedagogical tools tailored for high-impact instruction',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
 
-        const SizedBox(height: 22),
+        const SizedBox(height: 18),
 
         // Tool 1: AI Lesson Planner
         _aiToolCard(
@@ -791,13 +855,13 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           iconColor: const Color(0xFF818CF8),
           title: 'AI Lesson Planner',
           subtitle:
-              'Generate a structured 45-minute lesson plan with learning objectives, hooks, whiteboard illustrations, student activities, and exit checks.',
-          badge: 'Curriculum Builder',
+              'Generate structured 45-minute lesson plans with learning objectives, hooks, illustrations, student exercises, and exit checks.',
+          badge: 'Curriculum Engine',
           actionText: 'Launch Lesson Planner',
           onTap: _openAiLessonPlanner,
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
 
         // Tool 2: AI Exam Maker
         _aiToolCard(
@@ -805,54 +869,38 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           iconColor: AppColors.secondary,
           title: 'AI Exam & Paper Maker',
           subtitle:
-              'Craft balanced test papers with Section A/B/C, marking schemes, and complete teacher answer keys for any grade level from KG to PhD.',
+              'Craft balanced test papers with Section A/B/C, marking schemes, and complete teacher answer keys tailored to your grade level.',
           badge: 'Assessment Specialist',
           actionText: 'Create Exam Paper',
           onTap: _openAiExamGenerator,
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
 
-        // Tool 3: AI Student Attention Radar
-        _aiToolCard(
-          icon: Icons.psychology_alt_rounded,
-          iconColor: AppColors.success,
-          title: 'Student Attention Radar',
-          subtitle:
-              'Identifies students who are struggling with specific topics based on recent quiz scores and doubt patterns, with 1-tap intervention drills.',
-          badge: 'Student Analytics',
-          actionText: 'Inspect Flags & Alerts',
-          onTap: () {
-            setState(() => _currentIndex = 0);
-          },
-        ),
-
-        const SizedBox(height: 14),
-
-        // Tool 4: Class Broadcast Manager
-        _aiToolCard(
-          icon: Icons.campaign_rounded,
-          iconColor: AppColors.primary,
-          title: 'Class Noticeboard & Broadcasts',
-          subtitle:
-              'Post homework updates, exam notices, and important alerts directly to specific student batches with custom priority tags.',
-          badge: 'Class Communication',
-          actionText: 'Compose Announcement',
-          onTap: _openAnnouncements,
-        ),
-
-        const SizedBox(height: 14),
-
-        // Tool 5: Virtual Classroom Stage & Live AI Notes
+        // Tool 3: Virtual Classroom Stage & Live Notes
         _aiToolCard(
           icon: Icons.videocam_rounded,
           iconColor: const Color(0xFFEF4444),
           title: 'Virtual Classroom Stage & Live Notes',
           subtitle:
-              'Host interactive online classes with digital whiteboard, real-time student doubts queue, in-class pop quizzes, and automated Gemini AI lecture note transcription.',
+              'Host interactive classes with digital whiteboard, real-time student doubts queue, in-class pop quizzes, and automated Gemini AI transcription.',
           badge: 'Live Virtual Instruction',
-          actionText: 'Open Virtual Classroom Hub',
+          actionText: 'Open Classroom Hub',
           onTap: _openOnlineClassesHub,
+        ),
+
+        const SizedBox(height: 12),
+
+        // Tool 4: Class Broadcast Manager
+        _aiToolCard(
+          icon: Icons.campaign_rounded,
+          iconColor: AppColors.success,
+          title: 'Batch Noticeboard & Broadcasts',
+          subtitle:
+              'Post homework updates, exam notices, and announcements directly to specific student cohorts with priority flags.',
+          badge: 'Student Communication',
+          actionText: 'Compose Announcement',
+          onTap: _openAnnouncements,
         ),
       ],
     );
@@ -868,10 +916,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     required VoidCallback onTap,
   }) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -880,15 +928,15 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  color: iconColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: iconColor, size: 22),
+                child: Icon(icon, color: iconColor, size: 20),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -897,7 +945,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       title,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -905,7 +953,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       badge,
                       style: TextStyle(
                         color: iconColor,
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -914,34 +962,34 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             subtitle,
             style: const TextStyle(
               color: AppColors.textSecondary,
-              fontSize: 12.5,
-              height: 1.4,
+              fontSize: 12,
+              height: 1.35,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: onTap,
               style: ElevatedButton.styleFrom(
-                backgroundColor: iconColor.withValues(alpha: 0.15),
+                backgroundColor: iconColor.withValues(alpha: 0.12),
                 foregroundColor: iconColor,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: iconColor.withValues(alpha: 0.3)),
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(color: iconColor.withValues(alpha: 0.25)),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: const EdgeInsets.symmetric(vertical: 9),
               ),
-              icon: Icon(icon, size: 16),
+              icon: Icon(icon, size: 15),
               label: Text(
                 actionText,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
               ),
             ),
           ),
@@ -969,8 +1017,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     'Assignments Tracker',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -992,20 +1041,21 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                elevation: 0,
               ),
-              icon: const Icon(Icons.add_rounded, size: 16),
+              icon: const Icon(Icons.add_rounded, size: 15),
               label: const Text(
                 'Assign',
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
               ),
             ),
           ],
         ),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
 
         ..._homeworkList.map((hw) {
           final submitted = hw['submitted'] as int;
@@ -1013,11 +1063,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           final pct = total > 0 ? (submitted / total) : 0.0;
 
           return Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.border),
             ),
             child: Column(
@@ -1026,7 +1076,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
@@ -1035,7 +1085,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                         hw['class'],
                         style: const TextStyle(
                           color: AppColors.primary,
-                          fontSize: 10.5,
+                          fontSize: 10,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -1045,7 +1095,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       '${hw['subject']} • ${hw['points']} XP',
                       style: const TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 11.5,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1060,12 +1110,12 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   hw['title'],
                   style: const TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 15,
+                    fontSize: 14.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1082,23 +1132,23 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       'Due: ${hw['due']}',
                       style: const TextStyle(
                         color: AppColors.textMuted,
-                        fontSize: 12,
+                        fontSize: 11.5,
                       ),
                     ),
                     const Spacer(),
                     Text(
-                      '$submitted/$total Submitted (${(pct * 100).toInt()}%)',
+                      '$submitted/$total (${(pct * 100).toInt()}%)',
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 7),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: pct,
                     backgroundColor: AppColors.surfaceLight,
@@ -1107,7 +1157,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                           ? AppColors.success
                           : (pct >= 0.5 ? AppColors.secondary : AppColors.primary),
                     ),
-                    minHeight: 6,
+                    minHeight: 5,
                   ),
                 ),
               ],

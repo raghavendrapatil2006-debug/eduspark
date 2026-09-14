@@ -239,8 +239,8 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         decoration: _inputDecoration(
                           hint: _selectedRole == 'student'
-                              ? 'e.g. Raghavendra'
-                              : 'e.g. Prof. Raghavendra',
+                              ? 'e.g. John Doe'
+                              : 'e.g. Dr. Jane Smith',
                           icon: Icons.person_outline_rounded,
                         ),
                         validator: (v) => v == null || v.trim().isEmpty

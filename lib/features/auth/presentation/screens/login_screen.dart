@@ -102,25 +102,6 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  Future<void> _handleGuestLogin() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    final res = await AuthService.instance.signInDemo(role: _selectedRole);
-
-    if (!mounted) return;
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (res.success) {
-      _routeToDashboard();
-    }
-  }
-
   void _routeToDashboard() {
     if (_selectedRole == 'teacher') {
       context.go('/teacher-dashboard');
@@ -639,45 +620,6 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildAlternativeAuthRow() {
     return Column(
       children: [
-        // Quick Guest Access Button
-        Container(
-          width: double.infinity,
-          height: 46,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                _accentColor.withValues(alpha: 0.15),
-                _accentColor.withValues(alpha: 0.05),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: _accentColor.withValues(alpha: 0.4),
-            ),
-          ),
-          child: InkWell(
-            onTap: _isLoading ? null : _handleGuestLogin,
-            borderRadius: BorderRadius.circular(14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.bolt_rounded, size: 18, color: _accentColor),
-                const SizedBox(width: 8),
-                Text(
-                  'Continue as Guest (${_selectedRole == 'student' ? 'Student' : 'Faculty'})',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: _accentColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
         // Google & Phone OTP buttons
         Row(
           children: [

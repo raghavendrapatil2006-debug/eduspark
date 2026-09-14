@@ -2,23 +2,66 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/user_profile_service.dart';
+import '../../../../core/services/teacher_student_roster_service.dart';
 
-class ClassLeaderboardSheet extends StatelessWidget {
+class ClassLeaderboardSheet extends StatefulWidget {
   const ClassLeaderboardSheet({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  State<ClassLeaderboardSheet> createState() => _ClassLeaderboardSheetState();
+}
+
+class _ClassLeaderboardSheetState extends State<ClassLeaderboardSheet> {
+  List<_LearnerRank> _learners = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLeaderboard();
+  }
+
+  Future<void> _loadLeaderboard() async {
     final studentName = UserProfileService.instance.studentName;
-    final learners = [
-      _LearnerRank(1, 'Priya S.', '1,450 XP', '🔥 9 days', 'CSE Sec-A', false),
-      _LearnerRank(2, '$studentName (You)', '1,240 XP', '🔥 7 days', 'CSE Sec-A', true),
-      _LearnerRank(3, 'Rohan M.', '1,180 XP', '🔥 6 days', 'CSE Sec-B', false),
-      _LearnerRank(4, 'Ananya K.', '1,050 XP', '🔥 5 days', 'CSE Sec-A', false),
-      _LearnerRank(5, 'Kabir T.', '980 XP', '🔥 4 days', 'CSE Sec-C', false),
-      _LearnerRank(6, 'Sneha R.', '920 XP', '🔥 5 days', 'CSE Sec-B', false),
-      _LearnerRank(7, 'Dev P.', '870 XP', '🔥 3 days', 'CSE Sec-A', false),
-      _LearnerRank(8, 'Isha G.', '810 XP', '🔥 3 days', 'CSE Sec-C', false),
+    final allStudents =
+        await TeacherStudentRosterService.instance.getAllStudents();
+
+    final otherStudents = allStudents
+        .where((s) =>
+            s.name.trim().toLowerCase() != studentName.trim().toLowerCase())
+        .toList();
+
+    final List<_LearnerRank> ranks = [
+      _LearnerRank(
+          1, '$studentName (You)', '1,240 XP', '🔥 7 days', 'Active Cohort', true),
     ];
+
+    for (int i = 0; i < otherStudents.length; i++) {
+      final s = otherStudents[i];
+      final xp = (s.mastery * 1000 + 350).toInt();
+      ranks.add(
+        _LearnerRank(
+          i + 2,
+          s.name,
+          '$xp XP',
+          '🔥 ${s.presentDays} days',
+          s.className,
+          false,
+        ),
+      );
+    }
+
+    if (mounted) {
+      setState(() {
+        _learners = ranks;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final learners = _learners;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
@@ -81,8 +124,10 @@ class ClassLeaderboardSheet extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: ListView(
-                physics: const BouncingScrollPhysics(),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView(
+                      physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
                 children: [
                   // Top 3 Podium
@@ -224,6 +269,33 @@ class ClassLeaderboardSheet extends StatelessWidget {
                           ],
                         ),
                       )),
+
+                  if (learners.length == 1)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded,
+                              size: 18, color: AppColors.textSecondary),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Other classmates will appear on the leaderboard as they register and earn XP.',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -234,7 +306,34 @@ class ClassLeaderboardSheet extends StatelessWidget {
   }
 
   Widget _buildPodium() {
-    final studentName = UserProfileService.instance.studentName;
+    if (_learners.isEmpty) return const SizedBox.shrink();
+
+    if (_learners.length == 1) {
+      final lead = _learners.first;
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Center(
+          child: _podiumColumn(
+            rank: '1st 👑',
+            name: lead.name,
+            xp: lead.xp,
+            height: 100,
+            avatarBg: AppColors.secondary,
+            isCurrentUser: true,
+          ),
+        ),
+      );
+    }
+
+    final first = _learners[0];
+    final second = _learners.length > 1 ? _learners[1] : null;
+    final third = _learners.length > 2 ? _learners[2] : null;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -246,33 +345,32 @@ class ClassLeaderboardSheet extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // 2nd Place (Current User)
-          _podiumColumn(
-            rank: '2nd 🥈',
-            name: '$studentName (You)',
-            xp: '1,240 XP',
-            height: 90,
-            avatarBg: AppColors.primary,
-            isCurrentUser: true,
-          ),
-          // 1st Place (Priya)
+          if (second != null)
+            _podiumColumn(
+              rank: '2nd 🥈',
+              name: second.name,
+              xp: second.xp,
+              height: 85,
+              avatarBg: AppColors.primary,
+              isCurrentUser: second.isCurrentUser,
+            ),
           _podiumColumn(
             rank: '1st 👑',
-            name: 'Priya S.',
-            xp: '1,450 XP',
-            height: 115,
+            name: first.name,
+            xp: first.xp,
+            height: 110,
             avatarBg: AppColors.secondary,
-            isCurrentUser: false,
+            isCurrentUser: first.isCurrentUser,
           ),
-          // 3rd Place (Rohan)
-          _podiumColumn(
-            rank: '3rd 🥉',
-            name: 'Rohan M.',
-            xp: '1,180 XP',
-            height: 75,
-            avatarBg: const Color(0xFFC084FC),
-            isCurrentUser: false,
-          ),
+          if (third != null)
+            _podiumColumn(
+              rank: '3rd 🥉',
+              name: third.name,
+              xp: third.xp,
+              height: 70,
+              avatarBg: const Color(0xFFC084FC),
+              isCurrentUser: third.isCurrentUser,
+            ),
         ],
       ),
     );

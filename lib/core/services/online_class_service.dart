@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'auth_service.dart';
 
 class StudentDoubtItem {
   final String id;
@@ -122,7 +123,7 @@ class OnlineClassService extends ChangeNotifier {
         title: 'Wave Optics & Snell’s Law Calculations',
         subject: 'Physics',
         targetStandard: 'Class 10-A (High School)',
-        hostTeacherName: 'Prof. Raghavendra',
+        hostTeacherName: AuthService.instance.currentUser?.name ?? 'Course Faculty',
         scheduledTime: '10:30 AM - 11:30 AM',
         status: 'live',
         roomCode: 'OPTICS-10A',
@@ -139,35 +140,7 @@ class OnlineClassService extends ChangeNotifier {
           'Light bends towards normal when transitioning from rarer to denser medium',
           'Frequency of wave remains constant during refraction; wavelength and speed change',
         ],
-        doubtsQueue: [
-          StudentDoubtItem(
-            id: 'dbt_1',
-            studentName: 'Priya Sharma',
-            doubtText: 'Sir, does light wave frequency change when entering water?',
-            timeAgo: '2m ago',
-            isAnswered: true,
-            teacherAnswer:
-                'No, frequency is determined solely by the source. Only velocity and wavelength decrease in water.',
-          ),
-          StudentDoubtItem(
-            id: 'dbt_2',
-            studentName: 'Rohan Verma',
-            doubtText: 'Can Snell’s Law be applied directly on curved lens surfaces?',
-            timeAgo: 'Just now',
-            isAnswered: false,
-            aiSuggestedAnswer:
-                'Yes! Apply Snell’s Law at each differential point by drawing a normal perpendicular to the curved tangent.',
-          ),
-          StudentDoubtItem(
-            id: 'dbt_3',
-            studentName: 'Ananya K.',
-            doubtText: 'What is the condition for Total Internal Reflection (TIR)?',
-            timeAgo: '4m ago',
-            isAnswered: false,
-            aiSuggestedAnswer:
-                'Light must travel from denser to rarer medium with angle of incidence greater than critical angle: θi > θc.',
-          ),
-        ],
+        doubtsQueue: const [],
         activePoll: LivePollItem(
           id: 'poll_1',
           question:
@@ -181,15 +154,7 @@ class OnlineClassService extends ChangeNotifier {
           votes: [25, 4, 3, 2],
           isActive: true,
         ),
-        connectedStudents: [
-          {'name': 'Raghavendra K.', 'status': 'Listening', 'handRaised': false},
-          {'name': 'Priya Sharma', 'status': 'Hand Raised', 'handRaised': true},
-          {'name': 'Rohan Verma', 'status': 'Hand Raised', 'handRaised': true},
-          {'name': 'Ananya K.', 'status': 'Listening', 'handRaised': false},
-          {'name': 'Marcus Chen', 'status': 'Listening', 'handRaised': false},
-          {'name': 'Sneha Rao', 'status': 'Active in Chat', 'handRaised': false},
-          {'name': 'David Miller', 'status': 'Listening', 'handRaised': false},
-        ],
+        connectedStudents: const [],
       ),
 
       // Upcoming Scheduled Class 1
@@ -198,7 +163,7 @@ class OnlineClassService extends ChangeNotifier {
         title: 'Dijkstra & Bellman-Ford Shortest Path Coding',
         subject: 'Computer Science',
         targetStandard: 'B.Tech CSE (Semester 3)',
-        hostTeacherName: 'Prof. Raghavendra',
+        hostTeacherName: AuthService.instance.currentUser?.name ?? 'Course Faculty',
         scheduledTime: 'Today, 01:30 PM - 02:45 PM',
         status: 'scheduled',
         roomCode: 'CSE-ALGO-3',
@@ -222,7 +187,7 @@ class OnlineClassService extends ChangeNotifier {
         title: 'Colloquium: Self-Attention & Transformer Convergence',
         subject: 'AI Research',
         targetStandard: 'PhD Scholars Cohort',
-        hostTeacherName: 'Prof. Raghavendra',
+        hostTeacherName: AuthService.instance.currentUser?.name ?? 'Research Advisor',
         scheduledTime: 'Today, 03:30 PM - 04:30 PM',
         status: 'scheduled',
         roomCode: 'PHD-AI-RESEARCH',
@@ -242,7 +207,7 @@ class OnlineClassService extends ChangeNotifier {
         title: 'Interactive 2D/3D Geometric Shapes & Counting',
         subject: 'Mathematics',
         targetStandard: '1st Standard (Bluebells)',
-        hostTeacherName: 'Prof. Raghavendra',
+        hostTeacherName: AuthService.instance.currentUser?.name ?? 'Primary Faculty',
         scheduledTime: 'Completed Today at 10:00 AM',
         status: 'completed',
         roomCode: 'MATHS-1ST-STD',
@@ -300,7 +265,7 @@ class OnlineClassService extends ChangeNotifier {
       title: title,
       subject: subject,
       targetStandard: targetStandard,
-      hostTeacherName: 'Prof. Raghavendra',
+      hostTeacherName: AuthService.instance.currentUser?.name ?? 'Course Faculty',
       scheduledTime: scheduledTime,
       status: startImmediately ? 'live' : 'scheduled',
       roomCode: code,
@@ -317,7 +282,7 @@ class OnlineClassService extends ChangeNotifier {
       ],
       doubtsQueue: [],
       connectedStudents: [
-        {'name': 'Raghavendra K.', 'status': 'Listening', 'handRaised': false},
+        {'name': 'Arjun M.', 'status': 'Listening', 'handRaised': false},
         {'name': 'Priya S.', 'status': 'Listening', 'handRaised': false},
       ],
     );

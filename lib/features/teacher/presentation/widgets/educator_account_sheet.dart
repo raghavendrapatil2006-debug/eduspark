@@ -11,11 +11,14 @@ class EducatorAccountSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = AuthService.instance.currentUser;
-    final name = user?.name ?? 'Prof. Raghavendra';
-    final email = user?.email ?? 'faculty@eduspark.ai';
-    final specialization =
-        user?.specialization ?? 'Computer Science & Engineering Pedagogy';
-    final school = user?.school ?? 'Institute of Technology & Advanced Studies';
+    final name = (user?.name != null &&
+            user!.name.isNotEmpty &&
+            user.name != 'Faculty Member')
+        ? user.name
+        : 'Guest';
+    final email = user?.email ?? 'Not signed in';
+    final specialization = user?.specialization ?? 'General Education';
+    final school = user?.school ?? 'EduSpark Academy';
 
     return Container(
       decoration: const BoxDecoration(

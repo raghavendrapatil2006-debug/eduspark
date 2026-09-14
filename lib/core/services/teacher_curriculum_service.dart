@@ -377,83 +377,9 @@ class TeacherCurriculumService extends ChangeNotifier {
   }
 
   /// Generates At-Risk Students dynamically based on active subject
+  /// Generates At-Risk Students (delegated to real dynamic database)
   List<AtRiskStudent> getAdaptiveAtRiskStudents() {
-    final sub = _activeSubject;
-    final branch = _activeBranch;
-
-    if (_activeCategory.contains('Kindergarten') || _activeCategory.contains('Primary')) {
-      return [
-        AtRiskStudent(
-          id: '1',
-          name: 'Ananya Verma',
-          standard: branch,
-          subject: sub,
-          flaggedReason:
-              'Missed 2 pattern recognition challenges; needs visual animal-counting games.',
-          score: 0.48,
-          suggestedAction: 'Assign Kindergarten & 1st Std Visual Puzzle',
-        ),
-        AtRiskStudent(
-          id: '2',
-          name: 'Kabir Patel',
-          standard: branch,
-          subject: sub,
-          flaggedReason:
-              'Hesitation in 3D shape identification (confuses cone and cylinder).',
-          score: 0.52,
-          suggestedAction: 'Assign 3D Shape Matching Flashcards',
-        ),
-      ];
-    }
-
-    if (_activeCategory.contains('High School')) {
-      return [
-        AtRiskStudent(
-          id: '1',
-          name: 'Rohan Sharma',
-          standard: '10th Standard',
-          subject: sub,
-          flaggedReason:
-              'Scored 42% on $sub quiz; struggles with step-by-step formula derivations.',
-          score: 0.42,
-          suggestedAction: 'Assign Step-by-Step Problem Solving Drill',
-        ),
-        AtRiskStudent(
-          id: '2',
-          name: 'Sneha Kulkarni',
-          standard: '10th Standard',
-          subject: sub,
-          flaggedReason:
-              'Consistently misses numerical problem questions in periodic assessments.',
-          score: 0.54,
-          suggestedAction: 'Assign AI Tutor Formula Practice Lab',
-        ),
-      ];
-    }
-
-    // Higher Secondary & Engineering / Degrees
-    return [
-      AtRiskStudent(
-        id: '1',
-        name: 'David Miller',
-        standard: branch,
-        subject: sub,
-        flaggedReason:
-            'Missed asymptotic complexity analysis on $sub problem set; low test score.',
-        score: 0.51,
-        suggestedAction: 'Assign Step-by-Step Complexity Breakdown Worksheet',
-      ),
-      AtRiskStudent(
-        id: '2',
-        name: 'Priya Sen',
-        standard: branch,
-        subject: sub,
-        flaggedReason:
-            'Struggling with edge cases and optimization in weekly coding test.',
-        score: 0.58,
-        suggestedAction: 'Assign Practice Quiz on $sub Fundamentals',
-      ),
-    ];
+    return const [];
   }
 
   /// Generates Homework List for active standard & subject
@@ -467,8 +393,8 @@ class TeacherCurriculumService extends ChangeNotifier {
         'class': branch.split('(').first.trim(),
         'subject': sub,
         'due': 'Tomorrow, 05:00 PM',
-        'submitted': 34,
-        'total': 42,
+        'submitted': 0,
+        'total': 0,
         'status': 'Active',
         'points': 50,
       },
@@ -477,44 +403,16 @@ class TeacherCurriculumService extends ChangeNotifier {
         'class': branch.split('(').first.trim(),
         'subject': sub,
         'due': 'Friday, 11:59 PM',
-        'submitted': 28,
-        'total': 42,
+        'submitted': 0,
+        'total': 0,
         'status': 'Active',
         'points': 100,
       },
     ];
   }
 
-  /// Generates Pending Submissions queue for active standard
+  /// Generates Pending Submissions queue (real registered submissions only)
   List<Map<String, dynamic>> getAdaptivePendingGrading() {
-    final sub = _activeSubject;
-    final branch = _activeBranch;
-
-    return [
-      {
-        'student': 'Raghavendra K.',
-        'class': branch.split('(').first.trim(),
-        'assignment': '$sub Assignment 1',
-        'time': '15 mins ago',
-        'grade': 'Awaiting Score',
-        'autoScore': '94% (AI Verified)',
-      },
-      {
-        'student': 'Priya Patel',
-        'class': branch.split('(').first.trim(),
-        'assignment': '$sub Assignment 1',
-        'time': '1 hour ago',
-        'grade': 'Awaiting Score',
-        'autoScore': '88% (All Checks Passed)',
-      },
-      {
-        'student': 'Marcus Chen',
-        'class': branch.split('(').first.trim(),
-        'assignment': '$sub Assignment 1',
-        'time': '3 hours ago',
-        'grade': 'Awaiting Score',
-        'autoScore': '82% (Minor notation errors)',
-      },
-    ];
+    return const [];
   }
 }

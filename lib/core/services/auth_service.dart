@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/auth/domain/models/user_model.dart';
 import 'user_profile_service.dart';
+import 'teacher_student_roster_service.dart';
 
 class PhoneOtpSendResult {
   final bool success;
@@ -39,7 +40,7 @@ class AuthService extends ChangeNotifier {
   static final AuthService instance = AuthService._();
 
   static const String _userStorageKey = 'eduspark_auth_user';
-  static const String _defaultStudentEmail = 'raghavendra@eduspark.ai';
+  static const String _defaultStudentEmail = 'student@eduspark.ai';
   static const String _defaultTeacherEmail = 'faculty@eduspark.ai';
 
   UserModel? _currentUser;
@@ -62,8 +63,19 @@ class AuthService extends ChangeNotifier {
       final userJson = prefs.getString(_userStorageKey);
 
       if (userJson != null && userJson.isNotEmpty) {
-        _currentUser = UserModel.fromJson(userJson);
-        _syncToUserProfileService(_currentUser!);
+        final loaded = UserModel.fromJson(userJson);
+        // Purge old demo session if it was stored
+        if (loaded.isDemo ||
+            loaded.id.contains('_001') ||
+            loaded.email == _defaultTeacherEmail ||
+            loaded.email == _defaultStudentEmail ||
+            loaded.name == 'Faculty Member') {
+          await prefs.remove(_userStorageKey);
+          _currentUser = null;
+        } else {
+          _currentUser = loaded;
+          _syncToUserProfileService(_currentUser!);
+        }
       }
     } catch (e) {
       debugPrint('AuthService init error: $e');
@@ -108,7 +120,7 @@ class AuthService extends ChangeNotifier {
     // Assign role-specific defaults if not configured
     final user = UserModel(
       id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
-      name: cleanEmail == _defaultTeacherEmail ? 'Prof. Raghavendra' : name,
+      name: name,
       email: cleanEmail,
       role: role.toLowerCase(),
       standard: role.toLowerCase() == 'student'
@@ -184,6 +196,23 @@ class AuthService extends ChangeNotifier {
     );
 
     await _persistSession(user);
+
+    if (role.toLowerCase() == 'student') {
+      try {
+        final stdName = user.standard ?? 'B.Tech Computer Science & Engineering (CSE)';
+        await TeacherStudentRosterService.instance.addStudent(
+          className: stdName,
+          standardBadge: stdName.length > 8 ? stdName.substring(0, 8) : 'Student',
+          name: cleanName,
+          rollNo: '#${101 + (DateTime.now().millisecondsSinceEpoch % 899)}',
+          email: cleanEmail,
+          phone: phone,
+        );
+      } catch (e) {
+        debugPrint('Error enrolling registered student to roster: $e');
+      }
+    }
+
     return AuthResponse(
       success: true,
       message: 'Account created successfully! Welcome to EduSpark.',
@@ -221,10 +250,14 @@ class AuthService extends ChangeNotifier {
       return 'Firebase Authentication is not activated in project "eduspark-8bf63". In Firebase Console, go to Authentication > click "Get started", enable Phone & Google, and ensure "Identity Toolkit API" is allowed in Google Cloud API key restrictions.';
     }
 
-    if (codeLower.contains('operation-not-allowed') ||
-        lower.contains('operation-not-allowed') ||
+    if (codeLower.contains('admin-restricted-operation') ||
         lower.contains('admin-restricted-operation')) {
-      return 'Phone Authentication is not enabled in your Firebase Console. Please go to Firebase Console > Authentication > Sign-in method and enable "Phone".';
+      return 'Firebase blocked live SMS to this number (admin-restricted-operation). Please add "+917676420018" under Firebase Console > Authentication > Sign-in method > Phone > "Phone numbers for testing" with test OTP "123456".';
+    }
+
+    if (codeLower.contains('operation-not-allowed') ||
+        lower.contains('operation-not-allowed')) {
+      return 'Phone provider is not active or saved. Ensure "Phone" is enabled and saved in Firebase Console > Authentication > Sign-in method, and your domain is in Authorized domains.';
     }
 
     if (codeLower.contains('unauthorized-domain') ||
@@ -467,7 +500,7 @@ class AuthService extends ChangeNotifier {
         final displayName = fbUser.displayName?.trim();
         final name = (displayName != null && displayName.isNotEmpty)
             ? displayName
-            : (role.toLowerCase() == 'teacher' ? 'Prof. Raghavendra' : 'Raghavendra');
+            : (role.toLowerCase() == 'teacher' ? 'Educator' : 'Student');
         final email = fbUser.email ?? (role.toLowerCase() == 'teacher' ? _defaultTeacherEmail : _defaultStudentEmail);
 
         final user = UserModel(
@@ -519,10 +552,10 @@ class AuthService extends ChangeNotifier {
     // Reliable fallback: Authenticate with Google identity
     final user = UserModel(
       id: 'usr_g_${DateTime.now().millisecondsSinceEpoch}',
-      name: role.toLowerCase() == 'teacher' ? 'Prof. Raghavendra' : 'Raghavendra',
+      name: role.toLowerCase() == 'teacher' ? 'Educator' : 'Student',
       email: role.toLowerCase() == 'teacher'
           ? 'faculty@eduspark.ai'
-          : 'raghavendra@eduspark.ai',
+          : 'student@eduspark.ai',
       role: role.toLowerCase(),
       standard: role.toLowerCase() == 'student'
           ? 'B.Tech Computer Science & Engineering (CSE)'
@@ -544,31 +577,11 @@ class AuthService extends ChangeNotifier {
     );
   }
 
-  /// Quick Access Sign-In
+  /// Demo sign-in has been disabled for production
   Future<AuthResponse> signInDemo({required String role}) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final isTeacherRole = role.toLowerCase() == 'teacher';
-    final user = UserModel(
-      id: 'usr_${isTeacherRole ? "faculty" : "student"}_001',
-      name: isTeacherRole ? 'Prof. Raghavendra' : 'Raghavendra',
-      email: isTeacherRole ? _defaultTeacherEmail : _defaultStudentEmail,
-      role: isTeacherRole ? 'teacher' : 'student',
-      standard: isTeacherRole ? null : 'B.Tech Computer Science & Engineering (CSE)',
-      board: isTeacherRole ? null : 'State Technological University',
-      school: isTeacherRole
-          ? 'Institute of Technology & Advanced Studies'
-          : 'University Institute of Technology',
-      specialization: isTeacherRole ? 'Computer Science & Engineering' : null,
-      isDemo: false,
-      createdAt: DateTime.now(),
-    );
-
-    await _persistSession(user);
-    return AuthResponse(
-      success: true,
-      message: 'Signed in successfully!',
-      user: user,
+    return const AuthResponse(
+      success: false,
+      message: 'Please register your account to continue.',
     );
   }
 

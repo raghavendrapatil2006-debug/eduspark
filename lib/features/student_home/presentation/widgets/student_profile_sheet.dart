@@ -9,7 +9,7 @@ class StudentProfileSheet extends StatefulWidget {
 
   const StudentProfileSheet({
     super.key,
-    this.initialName = 'Raghavendra',
+    this.initialName = 'Guest',
     this.onNameChanged,
   });
 

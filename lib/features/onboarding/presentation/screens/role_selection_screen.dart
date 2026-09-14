@@ -43,17 +43,19 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
   }
 
   void _selectStudent() {
-    if (!AuthService.instance.isAuthenticated) {
-      AuthService.instance.signInDemo(role: 'student');
+    if (AuthService.instance.isAuthenticated && !AuthService.instance.isTeacher) {
+      context.go('/student-home');
+    } else {
+      context.push('/signup', extra: 'student');
     }
-    context.go('/student-home');
   }
 
   void _selectTeacher() {
-    if (!AuthService.instance.isAuthenticated) {
-      AuthService.instance.signInDemo(role: 'teacher');
+    if (AuthService.instance.isAuthenticated && AuthService.instance.isTeacher) {
+      context.go('/teacher-dashboard');
+    } else {
+      context.push('/signup', extra: 'teacher');
     }
-    context.go('/teacher-dashboard');
   }
 
   @override

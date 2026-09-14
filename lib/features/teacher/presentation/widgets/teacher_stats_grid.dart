@@ -14,10 +14,10 @@ class TeacherStatsGrid extends StatelessWidget {
 
   const TeacherStatsGrid({
     super.key,
-    this.totalStudents = 148,
-    this.activeBatches = 4,
-    this.pendingReviews = 6,
-    this.avgAttendance = 94.2,
+    this.totalStudents = 0,
+    this.activeBatches = 0,
+    this.pendingReviews = 0,
+    this.avgAttendance = 100.0,
     this.onStudentsTap,
     this.onBatchesTap,
     this.onReviewsTap,
@@ -36,8 +36,8 @@ class TeacherStatsGrid extends StatelessWidget {
                 iconColor: AppColors.primary,
                 value: '$totalStudents',
                 label: 'Total Students',
-                trend: '+12 this term',
-                isPositiveTrend: true,
+                trend: totalStudents > 0 ? '$totalStudents Registered' : 'No Students Yet',
+                isPositiveTrend: totalStudents > 0,
                 onTap: onStudentsTap,
               ),
             ),
@@ -48,7 +48,7 @@ class TeacherStatsGrid extends StatelessWidget {
                 iconColor: const Color(0xFF818CF8),
                 value: '$activeBatches',
                 label: 'Active Batches',
-                trend: 'KG to PhD',
+                trend: '$activeBatches Active',
                 isPositiveTrend: true,
                 onTap: onBatchesTap,
               ),
@@ -64,8 +64,8 @@ class TeacherStatsGrid extends StatelessWidget {
                 iconColor: AppColors.secondary,
                 value: '$pendingReviews',
                 label: 'Pending Reviews',
-                trend: 'Due today',
-                isPositiveTrend: false,
+                trend: pendingReviews > 0 ? 'Requires Action' : 'All Clear',
+                isPositiveTrend: pendingReviews == 0,
                 onTap: onReviewsTap,
               ),
             ),
@@ -74,10 +74,12 @@ class TeacherStatsGrid extends StatelessWidget {
               child: _StatCard(
                 icon: Icons.verified_rounded,
                 iconColor: AppColors.success,
-                value: '${avgAttendance.toStringAsFixed(1)}%',
+                value: totalStudents > 0 ? '${avgAttendance.toStringAsFixed(1)}%' : 'N/A',
                 label: 'Avg Attendance',
-                trend: 'High engagement',
-                isPositiveTrend: true,
+                trend: totalStudents > 0
+                    ? (avgAttendance >= 85 ? 'High engagement' : 'Follow-up needed')
+                    : 'No attendance data',
+                isPositiveTrend: avgAttendance >= 85,
                 onTap: onAttendanceTap,
               ),
             ),
@@ -111,14 +113,14 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.border),
           ),
           child: Column(
@@ -128,24 +130,24 @@ class _StatCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    width: 38,
-                    height: 38,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: iconColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(icon, color: iconColor, size: 20),
+                    child: Icon(icon, color: iconColor, size: 19),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
+                      horizontal: 7,
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
                       color: isPositiveTrend
                           ? AppColors.success.withValues(alpha: 0.12)
                           : AppColors.secondary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       trend,
@@ -160,16 +162,17 @@ class _StatCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               Text(
                 value,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
               Text(
                 label,
                 style: const TextStyle(

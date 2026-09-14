@@ -14,16 +14,16 @@ class HomeHeader extends StatelessWidget {
 
   const HomeHeader({
     super.key,
-    this.studentName = 'Raghavendra',
+    this.studentName = 'Guest',
     this.standard,
     this.onProfileTap,
     this.onNotificationTap,
-    this.unreadNotifications = 2,
+    this.unreadNotifications = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final initial = studentName.isNotEmpty ? studentName[0].toUpperCase() : 'R';
+    final initial = studentName.isNotEmpty ? studentName[0].toUpperCase() : 'G';
 
     return Row(
       children: [

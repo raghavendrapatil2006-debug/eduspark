@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/services/auth_service.dart';
 import '../widgets/training_module_detail_sheet.dart';
 import '../widgets/mock_classroom_simulator_sheet.dart';
 import '../widgets/teacher_certificate_sheet.dart';
@@ -13,7 +14,8 @@ class TeacherTrainingScreen extends StatefulWidget {
 }
 
 class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
-  final String _teacherName = 'Prof. Raghavendra';
+  String get _teacherName =>
+      AuthService.instance.currentUser?.name ?? 'Educator';
 
   late List<TrainingModule> _modules;
 

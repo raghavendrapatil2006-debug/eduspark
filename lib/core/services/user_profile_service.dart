@@ -11,7 +11,7 @@ class UserProfileService extends ChangeNotifier {
   static const String _keyBoard = 'user_board';
   static const String _keySchool = 'user_school';
 
-  String _studentName = 'Raghavendra';
+  String _studentName = 'Guest';
   String _standard = 'B.Tech Computer Science & Engineering (CSE)';
   String _board = 'State Technological University';
   String _school = 'University Institute of Technology';
@@ -105,7 +105,7 @@ class UserProfileService extends ChangeNotifier {
   Future<void> init() async {
     if (_isInitialized) return;
     final prefs = await SharedPreferences.getInstance();
-    _studentName = prefs.getString(_keyName) ?? 'Raghavendra';
+    _studentName = prefs.getString(_keyName) ?? 'Guest';
     _standard = prefs.getString(_keyStandard) ??
         'B.Tech Computer Science & Engineering (CSE)';
     _board = prefs.getString(_keyBoard) ?? 'State Technological University';

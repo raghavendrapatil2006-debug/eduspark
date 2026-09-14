@@ -93,7 +93,7 @@ class _StudentSettingsSheetState extends State<StudentSettingsSheet> {
   Widget _buildAccountSection() {
     final user = AuthService.instance.currentUser;
     final name = user?.name ?? UserProfileService.instance.studentName;
-    final email = user?.email ?? 'raghavendra@eduspark.ai';
+    final email = user?.email ?? 'student@eduspark.ai';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),

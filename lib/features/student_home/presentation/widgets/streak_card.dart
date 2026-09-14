@@ -9,8 +9,8 @@ class StreakCard extends StatelessWidget {
 
   const StreakCard({
     super.key,
-    this.streakDays = 7,
-    this.xp = 120,
+    this.streakDays = 0,
+    this.xp = 0,
     this.onTap,
   });
 
@@ -55,7 +55,7 @@ class StreakCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$streakDays Day Streak',
+                  streakDays > 0 ? '$streakDays Day Streak' : 'Daily Streak',
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 16,
@@ -65,9 +65,9 @@ class StreakCard extends StatelessWidget {
 
                 const SizedBox(height: 5),
 
-                const Text(
-                  'Keep your streak alive!',
-                  style: TextStyle(
+                Text(
+                  streakDays > 0 ? 'Keep your streak alive!' : 'Complete study tasks to start your streak',
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
                   ),
@@ -80,7 +80,7 @@ class StreakCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '+$xp XP',
+                xp > 0 ? '+$xp XP' : '0 XP',
                 style: const TextStyle(
                   color: AppColors.secondary,
                   fontSize: 15,

@@ -37,31 +37,29 @@ class AtRiskStudentsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: AppColors.secondary.withValues(alpha: 0.3),
-        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with AI Alert Badge
+          // Header
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
-                  color: AppColors.secondary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.secondary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(9),
                 ),
                 child: const Icon(
-                  Icons.psychology_alt_rounded,
+                  Icons.psychology_rounded,
                   color: AppColors.secondary,
-                  size: 20,
+                  size: 18,
                 ),
               ),
               const SizedBox(width: 10),
@@ -70,19 +68,20 @@ class AtRiskStudentsCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'AI Student Attention Alerts',
+                      'Student Support Radar',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
                       ),
                     ),
-                    SizedBox(height: 2),
                     Text(
-                      'Detected students who may need extra conceptual support',
+                      'Students requiring conceptual follow-up',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 11,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -91,13 +90,15 @@ class AtRiskStudentsCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.danger.withValues(alpha: 0.15),
+                  color: students.isEmpty
+                      ? AppColors.success.withValues(alpha: 0.15)
+                      : AppColors.secondary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  '${students.length} Flags',
-                  style: const TextStyle(
-                    color: AppColors.danger,
+                  students.isEmpty ? 'All On Track' : '${students.length} Follow-ups',
+                  style: TextStyle(
+                    color: students.isEmpty ? AppColors.success : AppColors.secondary,
                     fontSize: 10.5,
                     fontWeight: FontWeight.w800,
                   ),
@@ -106,13 +107,63 @@ class AtRiskStudentsCard extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          ...students.map((st) => _StudentAlertTile(
-                student: st,
-                onAssignPractice: () => onAssignPractice?.call(st),
-                onSendNote: () => onSendNote?.call(st),
-              )),
+          if (students.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.verified_rounded,
+                      color: AppColors.success,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'No students flagged for follow-up',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Students with low attendance (<75%) or weak scores will appear here once registered.',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...students.map((st) => _StudentAlertTile(
+                  student: st,
+                  onAssignPractice: () => onAssignPractice?.call(st),
+                  onSendNote: () => onSendNote?.call(st),
+                )),
         ],
       ),
     );
@@ -133,11 +184,11 @@ class _StudentAlertTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.background.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -146,18 +197,18 @@ class _StudentAlertTile extends StatelessWidget {
           Row(
             children: [
               CircleAvatar(
-                radius: 16,
+                radius: 14,
                 backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                 child: Text(
                   student.name.isNotEmpty ? student.name[0] : 'S',
                   style: const TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w800,
-                    fontSize: 13,
+                    fontSize: 12,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 9),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,7 +217,7 @@ class _StudentAlertTile extends StatelessWidget {
                       student.name,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 13.5,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -181,16 +232,16 @@ class _StudentAlertTile extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.danger.withValues(alpha: 0.12),
+                  color: AppColors.secondary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  '${(student.score * 100).toInt()}% Score',
+                  '${(student.score * 100).toInt()}% Avg',
                   style: const TextStyle(
-                    color: AppColors.danger,
-                    fontSize: 11,
+                    color: AppColors.secondary,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -199,15 +250,15 @@ class _StudentAlertTile extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(7),
             ),
             child: Row(
               children: [
                 const Icon(
-                  Icons.info_outline_rounded,
+                  Icons.lightbulb_outline_rounded,
                   size: 13,
                   color: AppColors.secondary,
                 ),
@@ -225,7 +276,7 @@ class _StudentAlertTile extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -240,7 +291,7 @@ class _StudentAlertTile extends StatelessWidget {
                     ),
                     child: const Center(
                       child: Text(
-                        'Assign Practice',
+                        'Assign Practice Drill',
                         style: TextStyle(
                           color: AppColors.primary,
                           fontSize: 11.5,
@@ -252,26 +303,30 @@ class _StudentAlertTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: InkWell(
-                  onTap: onSendNote,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceLight,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Send Encouragement',
+              InkWell(
+                onTap: onSendNote,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.send_rounded, size: 11, color: AppColors.textSecondary),
+                      SizedBox(width: 4),
+                      Text(
+                        'Note',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 11.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),

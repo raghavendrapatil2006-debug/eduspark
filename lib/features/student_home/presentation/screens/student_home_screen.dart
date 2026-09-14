@@ -23,6 +23,7 @@ import '../../../learning/presentation/screens/subject_topics_screen.dart';
 import '../../../learning/presentation/screens/topic_lesson_screen.dart';
 import '../../../../core/services/student_curriculum_service.dart';
 import '../../../../core/services/user_profile_service.dart';
+import '../../../../core/services/auth_service.dart';
 import '../../../../features/subscription/presentation/widgets/educational_ad_banner.dart';
 import '../widgets/student_standard_picker_sheet.dart';
 
@@ -35,8 +36,8 @@ class StudentHomeScreen extends StatefulWidget {
 
 class _StudentHomeScreenState extends State<StudentHomeScreen> {
   int _currentIndex = 0;
-  String _studentName = 'Raghavendra';
-  int _unreadNotifications = 2;
+  String _studentName = 'Guest';
+  int _unreadNotifications = 0;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -46,17 +47,45 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _studentName = UserProfileService.instance.studentName;
+    _resolveStudentName();
     UserProfileService.instance.addListener(_onProfileUpdated);
+    AuthService.instance.addListener(_onAuthUpdated);
     StudentCurriculumService.instance.addListener(_onCurriculumUpdated);
     StudentCurriculumService.instance.init();
     _loadAdaptiveStudentData();
   }
 
+  void _resolveStudentName() {
+    final user = AuthService.instance.currentUser;
+    if (user != null &&
+        user.role == 'student' &&
+        user.name.trim().isNotEmpty &&
+        user.name.trim() != 'Faculty Member') {
+      _studentName = user.name.trim();
+    } else if (AuthService.instance.isAuthenticated &&
+        !AuthService.instance.isTeacher) {
+      final profName = UserProfileService.instance.studentName;
+      _studentName =
+          (profName.isNotEmpty && profName != 'Faculty Member')
+              ? profName
+              : 'Guest';
+    } else {
+      _studentName = 'Guest';
+    }
+  }
+
+  void _onAuthUpdated() {
+    if (mounted) {
+      setState(() {
+        _resolveStudentName();
+      });
+    }
+  }
+
   void _onProfileUpdated() {
     if (mounted) {
       setState(() {
-        _studentName = UserProfileService.instance.studentName;
+        _resolveStudentName();
       });
     }
   }
@@ -81,6 +110,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   @override
   void dispose() {
     UserProfileService.instance.removeListener(_onProfileUpdated);
+    AuthService.instance.removeListener(_onAuthUpdated);
     StudentCurriculumService.instance.removeListener(_onCurriculumUpdated);
     _searchController.dispose();
     super.dispose();
@@ -233,8 +263,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               const SizedBox(height: 20),
 
               StreakCard(
-                streakDays: 7,
-                xp: 120,
+                streakDays: AuthService.instance.isAuthenticated ? 1 : 0,
+                xp: AuthService.instance.isAuthenticated ? 20 : 0,
                 onTap: _openStreakDetails,
               ),
 
